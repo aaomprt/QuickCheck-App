@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+body {
+  background-color: #9ACBD0;
+}
+
+input:focus {
+  outline-color: black;
+}
+
+select:focus {
+  outline-color: black;
+}

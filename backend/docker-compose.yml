@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16
+    container_name: quickcheck-postgres
+    environment:
+      POSTGRES_USER: quickcheck
+      POSTGRES_PASSWORD: quickcheck
+      POSTGRES_DB: quickcheck_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
