@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { Sheet } from 'react-modal-sheet';
+import Swal from 'sweetalert2';
 
 import CenterItem from '../components/CenterItem';
-import ViewMap from '../components/ViewMap';
+import MapView from '../components/MapView.jsx';
+import LoadingPage from '../components/LoadingPage.jsx';
 import { getDistance } from '../utils/Distance';
 import { API_BASE_URL } from '../config.js';
 
 import { IoClose } from "react-icons/io5";
 import { FaLocationArrow } from "react-icons/fa";
+import { HiOutlineListBullet } from "react-icons/hi2";
 
-// คำนวณเวลาเปิด-ปิดของศูนย์บริการ
 function isCenterOpen(center, now) {
     const [openH, openM] = center.open_time.split(":");
     const [closeH, closeM] = center.close_time.split(":");
@@ -23,100 +25,175 @@ function isCenterOpen(center, now) {
     return now >= openTime && now <= closeTime;
 }
 
+function buildCenterKey(center) {
+    return center.id ?? `${center.lat}-${center.lng}`;
+}
+
+function useUserLocation() {
+    const [userLocation, setUserLocation] = useState(null);
+
+    const fetch = () => {
+        if (!navigator.geolocation) return;
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            () => {
+                Swal.fire({
+                    title: "กรุณาเปิด GPS",
+                    icon: "warning",
+                    confirmButtonColor: "#04364A"
+                });
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 1000 * 60 * 5 }
+        );
+    };
+
+    return { userLocation, fetchUserLocation: fetch };
+}
+
+function useSortedCenters(serviceCenter, Search, userLocation) {
+    const filtered = serviceCenter.filter(c =>
+        c.name.toLowerCase().includes(Search.toLowerCase())
+    );
+
+    return useMemo(() => {
+        if (!userLocation) return filtered;
+
+        return [...filtered]
+            .map(center => ({
+                ...center,
+                distance: getDistance(userLocation.lat, userLocation.lng, center.lat, center.lng)
+            }))
+            .sort((a, b) => a.distance - b.distance);
+    }, [filtered, userLocation]);
+}
+
 export default function ServiceMap() {
     const [isSheetOpen, setSheetOpen] = useState(true);
     const [Search, setSearch] = useState("");
     const [selectedCenter, setSelectedCenter] = useState(null);
-    const [userLocation, setUserLocation] = useState(null);
     const [serviceCenter, setServiceCenter] = useState([]);
+    const [routeTarget, setRouteTarget] = useState(null);
+    const [isMapLoading, setIsMapLoading] = useState(true);
+    const itemRefs = useRef({});
+    const listRef = useRef(null);
+    const skipAutoScrollRef = useRef(false);
+
+    const { userLocation, fetchUserLocation } = useUserLocation();
+    const sortedCenters = useSortedCenters(serviceCenter, Search, userLocation);
+
     const sheetRef = useRef(null);
     const now = new Date();
 
-    const filteredCenters = serviceCenter.filter(c =>
-        c.name.toLowerCase().includes(Search.toLowerCase())
-    );
+    useEffect(() => { fetchUserLocation(); }, []);
 
-    const sortedCenters = useMemo(() => {
-        if (!userLocation) return filteredCenters;
-
-        return [...filteredCenters]
-            .map(center => ({
-                ...center,
-                distance: getDistance(
-                    userLocation.lat,
-                    userLocation.lng,
-                    center.lat,
-                    center.lng
-                )
-            }))
-            .sort((a, b) => a.distance - b.distance);
-    }, [filteredCenters, userLocation]);
-
-    // รับตำแหน่งผู้ใช้
+    // service center data api
     useEffect(() => {
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const loc = {
-                    lat: pos.coords.latitude,
-                    lng: pos.coords.longitude
-                }
-                setUserLocation(loc);
-                setSelectedCenter(loc);
-            },
-            (err) => console.error(err),
-            { enableHighAccuracy: true }
-        );
-
         fetch(`${API_BASE_URL}/service_center`)
             .then((res) => res.json())
             .then((data) => setServiceCenter(data))
-            .catch((err) => console.error('Error fetching user:', err));
+            .catch((err) => console.error('Error fetching center:', err));
     }, []);
+
+    // scroll service list
+    const scrollToCenter = (center) => {
+        const key = buildCenterKey(center);
+        const el = itemRefs.current[key];
+        const listEl = listRef.current;
+        if (!el || !listEl) return;
+
+        listEl.scrollTo({
+            top: Math.max(0, el.offsetTop - 60),
+            behavior: "smooth",
+        });
+    };
+
+    const handleMapPopupSelect = (center) => {
+        setSelectedCenter(center);
+        setSheetOpen(true);
+
+        setTimeout(() => {
+            sheetRef.current?.snapTo(2);
+            scrollToCenter(center);
+        }, 250);
+    };
 
     return (
         <>
+            {/* Loading page */}
+            {isMapLoading && (
+                <div className="fixed inset-0 z-99999 bg-[#9ACBD0]">
+                    <LoadingPage
+                        title="กำลังโหลด Google Map"
+                        subtitle="โปรดรอสักครู่..."
+                    />
+                </div>
+            )}
 
             <div className="relative w-full h-screen">
-
-                {/* MAP */}
-                <div className='absolute inset-0 z-0 "'>
-                    <ViewMap
+                <div className='absolute inset-0 z-0'>
+                    <MapView
                         centers={serviceCenter}
                         userLocation={userLocation}
                         selectedCenter={selectedCenter}
-                        onSelectCenter={(center) => {
-                            setSelectedCenter(center);
-                            setSheetOpen(true);
-                            sheetRef.current?.snapTo(2);
-                        }}
+                        routeTarget={routeTarget}
+                        onClearRoute={() => setRouteTarget(null)}
+                        onLoadingChange={setIsMapLoading}
+                        onPopupSelectCenter={handleMapPopupSelect}
                     />
                 </div>
 
-                {/* Search input */}
-                <div className='absolute z-20 w-5/6 h-10 top-5 left-1/2 -translate-x-1/2 drop-shadow-lg flex items-center'>
-                    <input
-                        type="text"
-                        placeholder='ค้นหาศูนย์ซ่อม'
-                        value={Search}
-                        onChange={e => setSearch(e.target.value)}
-                        onClick={() => setSheetOpen(false)}
-                        onKeyDown={(e) => e.key === "Enter" && setSheetOpen(true)}
-                        className='bg-white w-full h-full rounded-2xl px-4 focus:outline-[#04364A]'
-                    />
+                {/* Search bar */}
+                <div className="absolute z-20 w-5/6 h-10 top-5 left-1/2 -translate-x-1/2 drop-shadow-lg">
+                    <div className="relative w-full h-full">
+                        <input
+                            type="text"
+                            placeholder="ค้นหาศูนย์ซ่อม"
+                            value={Search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            onClick={() => setSheetOpen(false)}
+                            onKeyDown={(e) => e.key === "Enter" && setSheetOpen(true)}
+                            className="bg-white w-full h-full rounded-2xl px-4 pr-12 focus:outline-[#04364A]"
+                        />
+
+                        {Search.trim() !== "" && (
+                            <button
+                                type="button"
+                                onClick={() => setSearch("")}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-700 hover:text-black"
+                                aria-label="ล้างข้อความค้นหา"
+                            >
+                                <IoClose size={24} />
+                            </button>
+                        )}
+                    </div>
                 </div>
 
-                {/* ปุ่มกลับไปตำแหน่งผู้ใช้ */}
+                {/* current location btn */}
                 <button
-                    disabled={!userLocation}
-                    onClick={() => userLocation && setSelectedCenter(userLocation)}
+                    onClick={() => {
+                        setSelectedCenter(null);
+                        fetchUserLocation();
+                    }}
                     className={`
-                        absolute z-20 bottom-8 right-4 p-3 rounded-full
+                        absolute z-20 bottom-8 left-4 p-3 rounded-full drop-shadow-lg
                         ${userLocation
-                            ? 'bg-white text-[#04364A] drop-shadow-lg'
-                            : 'bg-gray-300 text-gray-400 cursor-not-allowed'}
+                            ? 'bg-white text-[#04364A]'
+                            : 'bg-[#FF5F25] text-white'}
                     `}
                 >
                     <FaLocationArrow size={18} />
+                </button>
+
+                <button
+                    onClick={() => {
+                        setSheetOpen(true);
+                        sheetRef.current?.snapTo(1);
+                    }}
+                    className="absolute z-20 bottom-5 left-1/2 -translate-x-1/2 bg-white px-4 py-2 rounded-full shadow-lg text-black flex items-center gap-2"
+                >
+                    <HiOutlineListBullet size={18} />
+                    ดูรายการศูนย์
                 </button>
             </div>
 
@@ -131,7 +208,6 @@ export default function ServiceMap() {
                     <Sheet.Header />
                     <Sheet.Content>
                         <div className="flex flex-col h-full">
-                            {/* Head */}
                             <div className='flex justify-between items-center px-5 mb-4'>
                                 <h2 className='text-lg'>
                                     {Search !== '' ? Search : 'ศูนย์ซ่อมใกล้ฉัน'}
@@ -144,11 +220,15 @@ export default function ServiceMap() {
                                 </button>
                             </div>
 
-                            {/* Service Center */}
-                            <div className="overflow-y-auto">
+                            {/* Service list */}
+                            <div ref={listRef} className="overflow-y-auto">
                                 {sortedCenters.map((center, index) => (
                                     <div
                                         key={center.id ?? index}
+                                        ref={(el) => {
+                                            const key = center.id ?? `${center.lat}-${center.lng}`;
+                                            itemRefs.current[key] = el;
+                                        }}
                                         className='bg-white mb-3 mx-3 p-3 rounded-xl drop-shadow-lg'
                                     >
                                         <CenterItem
@@ -160,19 +240,23 @@ export default function ServiceMap() {
                                             lat={center.lat}
                                             lng={center.lng}
                                             onSelectCenter={() => {
-                                                setSelectedCenter({ lat: center.lat, lng: center.lng });
+                                                skipAutoScrollRef.current = true;
+                                                setSelectedCenter(center);
                                                 sheetRef.current?.snapTo(1);
+                                            }}
+                                            onRoute={(target) => {
+                                                setSelectedCenter(center);
+                                                setRouteTarget(target);
+                                                setSheetOpen(false);
                                             }}
                                         />
                                     </div>
-                                ))
-                                }
+                                ))}
                             </div>
                         </div>
                     </Sheet.Content>
                 </Sheet.Container>
-                {/* <Sheet.Backdrop /> */}
             </Sheet>
         </>
-    )
+    );
 }

@@ -77,6 +77,7 @@ class UpdateCarRequest(BaseModel):
     model: Optional[str] = Field(None, description="แบบรถ เช่น Camry")
     year: Optional[int] = Field(None, description="ปี ค.ศ.")
     license_plate: Optional[str] = Field(None, description="เลขทะเบียน เช่น กย 1234 กรุงเทพมหานคร")
+    province: Optional[str] = Field(None, description="จังหวัดที่จดทะเบียน เช่น BKK")
     
     @validator('year')
     def validate_year(cls, v):

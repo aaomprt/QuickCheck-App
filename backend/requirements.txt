@@ -44,7 +44,7 @@ tzdata==2025.3
 urllib3==2.6.2
 uvicorn==0.38.0
 watchfiles==1.1.1
-tensorflow-cpu
 numpy==1.26.4
 pillow==10.2.0
 supabase==2.13.0
+onnxruntime

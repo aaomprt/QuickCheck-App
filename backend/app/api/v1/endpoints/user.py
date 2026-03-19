@@ -203,6 +203,7 @@ async def update_car(license_plate: str, request: UpdateCarRequest, db: Session 
                 model=car.model,
                 year=car.year,
                 license_plate=car.license_plate,
+                province=car.province,
             )
         )
 

@@ -14,4 +14,3 @@ class AssessDamageResponse(BaseModel):
     history_id: int
     license_plate: str
     items: List[HistoryItemOut]
-
