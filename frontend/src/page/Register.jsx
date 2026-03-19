@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import Select from 'react-select';
-import { liffClient as liff } from "../utils/liffClient";
+import toast, { Toaster } from 'react-hot-toast';
+
+import liff from '@line/liff';
 import { API_BASE_URL, LIFF_ID } from '../config.js';
 import LoadingPage from "../components/LoadingPage";
 import { select_province, car_model_year } from '../assets/Data.jsx';
-import toast, { Toaster } from 'react-hot-toast';
 
 const CAR_MODELS = Object.keys(car_model_year);
 
