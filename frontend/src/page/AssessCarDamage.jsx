@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from 'react-hot-toast';
 
-import { liffClient as liff } from "../utils/liffClient";
+import liff from '@line/liff';
 import { select_part } from '../assets/Data.jsx';
 import { API_BASE_URL } from '../config.js';
 

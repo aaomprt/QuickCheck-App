@@ -3,7 +3,7 @@ import Select from "react-select";
 import toast, { Toaster } from 'react-hot-toast';
 import Swal from 'sweetalert2';
 
-import { liffClient as liff } from "../utils/liffClient";
+import liff from '@line/liff';
 
 import { API_BASE_URL } from '../config.js';
 import LoadingPage from "../components/LoadingPage";
