@@ -72,6 +72,7 @@ function useImageSlider(totalSlides) {
 
 // สีตามระดับความเสียหาย
 function DamageLevelBadge({ level }) {
+
     if (level === "Minor") {
         return <p className="bg-[#FFE3BB] rounded-full text-center drop-shadow-md">ชนเบา</p>;
     } else if (level === "Moderate") {
@@ -125,6 +126,8 @@ function ImageSlider({ items }) {
 
 // ระดับความเสียหาย
 function DamageLevelSection({ items }) {
+    const hasUnassessable = items.some(item => item.damage_level === "Unassessable");
+
     return (
         <div className="my-3">
             <div className="flex items-center gap-1">
@@ -138,6 +141,10 @@ function DamageLevelSection({ items }) {
                         <DamageLevelBadge level={item.damage_level} />
                     </div>
                 ))}
+
+                {hasUnassessable && (
+                    <p className="text-[#FF4F0F] text-sm mt-4 ml-2">** รูปภาพไม่ชัดเจนกรุณากรอกข้อมูลอีกครั้ง</p>
+                )}
             </div>
         </div>
     );
@@ -235,7 +242,7 @@ export default function ResultAssess() {
                 {/* assess damage level */}
                 <DamageLevelSection items={items} />
 
-                <hr className="opacity-40 mt-5" />
+                <hr className="opacity-40 mt-3" />
 
                 {/* cost */}
                 <CostSection costItems={costItems} totalCost={result?.total_cost} />
