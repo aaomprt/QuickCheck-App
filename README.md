@@ -3,14 +3,14 @@
 
 ## 🌟 Key Features
 - AI Damage Analysis: วิเคราะห์ความเสียหาย 3 ระดับ (ชนเบา, ชนปานกลาง, ชนหนัก) ด้วย TensorFlow
-- Cost Estimation: ประเมินค่าซ่อมเบื้องต้นแยกตามรายการอะไหล่ของ
+- Cost Estimation: ประเมินค่าซ่อมเบื้องต้นแยกตามรายการอะไหล่
 - Service Center Locator: ค้นหาศูนย์ซ่อมบริการบนแผนที่
 - Seamless Integration: ใช้งานผ่าน LINE แอปพลิเคชัน
 
 ## 🏗️ System Architecture & Tech Stack
 - **Frontend:** React + Vite + Tailwind CSS (Hosted on Vercel)
 - **Backend API:** Python FastAPI (Hosted on Render)
-- **AI Model:** TensorFlow-CPU
+- **AI Model:** TensorFlow
 - **Database:** PostgreSQL (Managed by Supabase)
 - **Platform:** LINE LIFF
 
